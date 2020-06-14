@@ -166,6 +166,8 @@ class FilesStorage:
 
     def get(self, uuid):
         meta = self.read_meta(uuid)
+        if meta['hash'] in self.forbidden_hash:
+            raise KeyNotFound(uuid)
         path = self.accel_location(uuid)
         meta['X-Accel-Redirect'] = os.path.join(path, uuid).encode()
         return meta
