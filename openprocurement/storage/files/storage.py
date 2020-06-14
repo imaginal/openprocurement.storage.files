@@ -25,6 +25,7 @@ def get_now():
 class FilesStorage:
     def __init__(self, settings):
         self.web_root = settings['files.web_root'].strip()
+        self.archive_web_root = self.web_root + '.archive'
         self.save_path = settings['files.save_path'].strip()
         self.secret_key = settings['files.secret_key'].strip()
         self.disposition = settings.get('files.disposition', '') or 'inline'
@@ -43,8 +44,9 @@ class FilesStorage:
         self.file_mode = 0o440
         self.meta_mode = 0o400
 
-    def accel_location(self, uuid):
-        return os.path.join(self.web_root, uuid[-2:], uuid[-4:])
+    def web_path(self, uuid, archived=False):
+        web_root = self.web_root if not archived else self.archive_web_root
+        return os.path.join(web_root, uuid[-2:], uuid[-4:])
 
     def full_path(self, uuid):
         return os.path.join(self.save_path, uuid[-2:], uuid[-4:])
@@ -168,6 +170,6 @@ class FilesStorage:
         meta = self.read_meta(uuid)
         if meta['hash'] in self.forbidden_hash:
             raise KeyNotFound(uuid)
-        path = self.accel_location(uuid)
+        path = self.web_path(uuid, meta.get('archived'))
         meta['X-Accel-Redirect'] = os.path.join(path, uuid).encode()
         return meta
