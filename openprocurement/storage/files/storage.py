@@ -24,14 +24,14 @@ def get_now():
 
 class FilesStorage:
     def __init__(self, settings):
-        self.web_root = settings['web_root'].strip()
-        self.save_path = settings['save_path'].strip()
-        self.secret_key = settings.get('secret_key', '').strip()
-        self.disposition = settings.get('disposition', '') or 'inline'
-        self.dangerous_ext = settings.get('dangerous_ext', DANGEROUS_EXT).split(',')
+        self.web_root = settings['files.web_root'].strip()
+        self.save_path = settings['files.save_path'].strip()
+        self.secret_key = settings['files.secret_key'].strip()
+        self.disposition = settings.get('files.disposition', '') or 'inline'
+        self.dangerous_ext = settings.get('files.dangerous_ext', DANGEROUS_EXT).split(',')
         self.dangerous_mime_types = DANGEROUS_MIME_TYPES
-        if 'dangerous_mime' in settings:
-            with open(settings('dangerous_mime')) as fp:
+        if 'files.dangerous_mime' in settings:
+            with open(settings('files.dangerous_mime')) as fp:
                 self.dangerous_mime_types = [s.strip().lower() for s in fp.readlines() if s.strip()]
         self.magic = magic.Magic(mime=True)
         self.dir_mode = 0o2710
