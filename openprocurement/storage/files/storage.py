@@ -28,12 +28,17 @@ class FilesStorage:
         self.save_path = settings['files.save_path'].strip()
         self.secret_key = settings['files.secret_key'].strip()
         self.disposition = settings.get('files.disposition', '') or 'inline'
-        self.dangerous_ext = settings.get('files.dangerous_ext', DANGEROUS_EXT).split(',')
-        self.dangerous_mime_types = DANGEROUS_MIME_TYPES
+        dangerous_ext = settings.get('files.dangerous_ext', '') or DANGEROUS_EXT
+        self.dangerous_ext = set([s.strip().upper() for s in dangerous_ext.split(',') if s.strip()])
+        self.dangerous_mime = DANGEROUS_MIME_TYPES
+        self.forbidden_hash = set(['d41d8cd98f00b204e9800998ecf8427e'])
         if 'files.dangerous_mime' in settings:
-            with open(settings('files.dangerous_mime')) as fp:
-                self.dangerous_mime_types = [s.strip().lower() for s in fp.readlines() if s.strip()]
-        self.magic = magic.Magic(mime=True)
+            with open(settings['files.dangerous_mime']) as fp:
+                self.dangerous_mime = set([s.strip().lower() for s in fp.readlines() if '/' in s.strip()])
+        if 'files.forbidden_hash' in settings:
+            with open(settings['files.forbidden_hash']) as fp:
+                self.forbidden_hash = set([s.strip().lower() for s in fp.readlines() if len(s.strip()) == 32])
+            self.magic = magic.Magic(mime=True)
         self.dir_mode = 0o2710
         self.file_mode = 0o440
         self.meta_mode = 0o400
@@ -69,11 +74,11 @@ class FilesStorage:
         for ext in filename.rsplit('.', 2)[1:]:
             if ext.upper() in self.dangerous_ext:
                 return True
-        if content_type.lower() in self.dangerous_mime_types:
+        if content_type.lower() in self.dangerous_mime:
             return True
         fp.seek(0)
         magic_type = self.magic.from_buffer(fp.read(2048))
-        if magic_type.lower() in self.dangerous_mime_types:
+        if magic_type.lower() in self.dangerous_mime:
             return True
         if filename.upper().endswith('.ZIP') or \
                 'application/zip' in (content_type, magic_type):
@@ -98,8 +103,8 @@ class FilesStorage:
         return md5hash.hexdigest()
 
     def register(self, md5hash):
-        if md5hash == 'd41d8cd98f00b204e9800998ecf8427e':
-            raise StorageUploadError('empty_file')
+        if md5hash in self.forbidden_hash:
+            raise StorageUploadError('forbidden_file')
         now_iso = get_now().isoformat()
         uuid = hashlib.md5(md5hash + self.secret_key).hexdigest()
         meta = dict(hash=md5hash, created=now_iso)
@@ -115,8 +120,8 @@ class FilesStorage:
         content_type = post_file.type
         in_file = post_file.file
         md5hash = self.compute_md5(in_file)
-        if md5hash == 'd41d8cd98f00b204e9800998ecf8427e':
-            raise StorageUploadError('empty_file')
+        if md5hash in self.forbidden_hash:
+            raise StorageUploadError('forbidden_file')
 
         if uuid is None:
             uuid = hashlib.md5(md5hash + self.secret_key).hexdigest()
