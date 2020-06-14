@@ -106,7 +106,7 @@ class FilesStorage:
 
     def register(self, md5hash):
         if md5hash in self.forbidden_hash:
-            raise StorageUploadError('forbidden_file')
+            raise StorageUploadError('forbidden_file ' + md5hash)
         now_iso = get_now().isoformat()
         uuid = hashlib.md5(md5hash + self.secret_key).hexdigest()
         meta = dict(hash=md5hash, created=now_iso)
@@ -123,7 +123,7 @@ class FilesStorage:
         in_file = post_file.file
         md5hash = self.compute_md5(in_file)
         if md5hash in self.forbidden_hash:
-            raise StorageUploadError('forbidden_file')
+            raise StorageUploadError('forbidden_file ' + md5hash)
 
         if uuid is None:
             uuid = hashlib.md5(md5hash + self.secret_key).hexdigest()
@@ -131,7 +131,7 @@ class FilesStorage:
         else:
             meta = self.read_meta(uuid)
             if not compare_digest(meta['hash'], md5hash):
-                raise HashInvalid(md5hash)
+                raise HashInvalid(meta['hash'] + "/" + md5hash)
 
         path = self.full_path(uuid)
         name = os.path.join(path, uuid)
