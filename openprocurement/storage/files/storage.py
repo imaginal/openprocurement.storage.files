@@ -32,13 +32,13 @@ class FilesStorage:
         dangerous_ext = settings.get('files.dangerous_ext', '') or DANGEROUS_EXT
         self.dangerous_ext = set([s.strip().upper() for s in dangerous_ext.split(',') if s.strip()])
         self.dangerous_mime = DANGEROUS_MIME_TYPES
-        self.forbidden_hash = set(['d41d8cd98f00b204e9800998ecf8427e'])
+        self.forbidden_hash = set(['md5:d41d8cd98f00b204e9800998ecf8427e'])     # empty file
         if 'files.dangerous_mime' in settings:
             with open(settings['files.dangerous_mime']) as fp:
                 self.dangerous_mime = set([s.strip().lower() for s in fp.readlines() if '/' in s.strip()])
         if 'files.forbidden_hash' in settings:
             with open(settings['files.forbidden_hash']) as fp:
-                self.forbidden_hash = set([s.strip().lower() for s in fp.readlines() if len(s.strip()) == 32])
+                self.forbidden_hash = set([s.strip().lower() for s in fp.readlines() if s.startswith("md5:")])
             self.magic = magic.Magic(mime=True)
         self.dir_mode = 0o2710
         self.file_mode = 0o440
@@ -102,7 +102,7 @@ class FilesStorage:
             if not block or not len(block):
                 break
             md5hash.update(block)
-        return md5hash.hexdigest()
+        return "md5:" + md5hash.hexdigest()
 
     def register(self, md5hash):
         if md5hash in self.forbidden_hash:
@@ -145,7 +145,7 @@ class FilesStorage:
                     'filename': filename
                 })
                 self.save_meta(uuid, meta, overwrite=True)
-            return uuid, 'md5:' + md5hash, content_type, filename
+            return uuid, md5hash, content_type, filename
 
         if self.check_dangerous(filename, content_type, in_file):
             raise StorageUploadError('dangerous_file')
@@ -164,7 +164,7 @@ class FilesStorage:
         os.rename(name + '~', name)
         os.chmod(name, self.file_mode)
 
-        return uuid, 'md5:' + md5hash, content_type, filename
+        return uuid, md5hash, content_type, filename
 
     def get(self, uuid):
         meta = self.read_meta(uuid)
