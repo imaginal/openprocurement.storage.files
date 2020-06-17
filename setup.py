@@ -12,6 +12,7 @@ requires = [
     'openprocurement.documentservice',
     'python-magic',
     'pytz',
+    'requests',
     'rfc6266',
     'setuptools',
     'simplejson'
