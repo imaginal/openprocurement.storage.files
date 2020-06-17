@@ -40,6 +40,10 @@ class FilesStorage:
             with open(settings['files.forbidden_hash']) as fp:
                 self.forbidden_hash = set([s.strip().lower() for s in fp.readlines() if s.startswith("md5:")])
             self.magic = magic.Magic(mime=True)
+        if 'files.get_url_expire' in settings:
+            from openprocurement.documentservice import views
+            views.EXPIRE = int(settings['files.get_url_expire'])
+            views.LOGGER.info("Chagne default expire for get_url to {}".format(views.EXPIRE))
         self.dir_mode = 0o2710
         self.file_mode = 0o440
         self.meta_mode = 0o400
