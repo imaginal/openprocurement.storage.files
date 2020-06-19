@@ -1,12 +1,11 @@
 import os
-import os.path
 import hashlib
 import zipfile
 import simplejson as json
+from hmac import compare_digest
 from fcntl import flock, LOCK_EX, LOCK_NB
 from magic import Magic
 from time import sleep
-from hmac import compare_digest
 from datetime import datetime
 from pytz import timezone
 from rfc6266 import build_header
@@ -60,16 +59,24 @@ class FilesStorage:
         self.file_mode = 0o440
         self.meta_mode = 0o400
 
-    def web_path(self, uuid, archived=False):
+    def web_location(self, key, archived=False):
         web_root = self.web_root if not archived else self.archive_web_root
-        return os.path.join(web_root, uuid[-2:], uuid[-4:])
+        return os.path.join(web_root, key[-2:], key[-4:], key).encode()
 
-    def full_path(self, uuid):
-        return os.path.join(self.save_path, uuid[-2:], uuid[-4:])
+    def file_path(self, key):
+        path = os.path.join(self.save_path, key[-2:], key[-4:])
+        return path, os.path.join(path, key)
+
+    def hash_to_uuid(self, md5hash):
+        return hashlib.sha1(md5hash + ':uuid:' + self.secret_key).hexdigest()
+
+    def uuid_to_file(self, uuid):
+        return hashlib.sha1(uuid + ':file:' + self.secret_key).hexdigest()
 
     def save_meta(self, uuid, meta, overwrite=False):
-        path = self.full_path(uuid)
-        name = os.path.join(path, uuid + '.meta')
+        key = self.uuid_to_file(uuid)
+        path, name = self.file_path(key)
+        name += '.meta'
         if not overwrite and os.path.exists(name):
             raise ContentUploaded(uuid)
         meta['modified'] = get_now().isoformat()
@@ -82,8 +89,9 @@ class FilesStorage:
         os.chmod(name, self.meta_mode)
 
     def read_meta(self, uuid):
-        path = self.full_path(uuid)
-        name = os.path.join(path, uuid + '.meta')
+        key = self.uuid_to_file(uuid)
+        path, name = self.file_path(key)
+        name += '.meta'
         if not os.path.exists(name):
             raise KeyNotFound(uuid)
         with open(name) as fp:
@@ -161,8 +169,8 @@ class FilesStorage:
         if md5hash in self.forbidden_hash:
             raise StorageUploadError('forbidden_file ' + md5hash)
         now_iso = get_now().isoformat()
-        uuid = hashlib.md5(md5hash + self.secret_key).hexdigest()
-        meta = dict(hash=md5hash, created=now_iso)
+        uuid = self.hash_to_uuid(md5hash)
+        meta = dict(uuid=uuid, hash=md5hash, created=now_iso)
         try:
             self.save_meta(uuid, meta)
         except ContentUploaded:
@@ -179,15 +187,15 @@ class FilesStorage:
             raise StorageUploadError('forbidden_file ' + md5hash)
 
         if uuid is None:
-            uuid = hashlib.md5(md5hash + self.secret_key).hexdigest()
-            meta = dict(hash=md5hash, created=now_iso)
+            uuid = self.hash_to_uuid(md5hash)
+            meta = dict(uuid=uuid, hash=md5hash, created=now_iso)
         else:
             meta = self.read_meta(uuid)
             if not compare_digest(meta['hash'], md5hash):
                 raise HashInvalid(meta['hash'] + "/" + md5hash)
 
-        path = self.full_path(uuid)
-        name = os.path.join(path, uuid)
+        key = self.uuid_to_file(uuid)
+        path, name = self.file_path(key)
         if os.path.exists(name):
             meta = self.read_meta(uuid)
             if meta['filename'] != filename:
@@ -201,7 +209,7 @@ class FilesStorage:
             return uuid, md5hash, content_type, filename
 
         if self.check_forbidden(filename, content_type, in_file):
-            raise StorageUploadError('dangerous_file')
+            raise StorageUploadError('forbidden_file ' + md5hash)
 
         meta['filename'] = filename
         meta['Content-Type'] = content_type
@@ -226,8 +234,10 @@ class FilesStorage:
 
     def get(self, uuid):
         meta = self.read_meta(uuid)
+        if meta['uuid'] != uuid:
+            raise KeyNotFound(uuid)
         if meta['hash'] in self.forbidden_hash:
             raise KeyNotFound(uuid)
-        path = self.web_path(uuid, meta.get('archived'))
-        meta['X-Accel-Redirect'] = os.path.join(path, uuid).encode()
+        key = self.uuid_to_file(uuid)
+        meta['X-Accel-Redirect'] = self.web_location(key, meta.get('archived'))
         return meta
