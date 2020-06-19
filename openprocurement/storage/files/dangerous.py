@@ -1,7 +1,7 @@
 # Dangerous file extensions and mime types
 
 DANGEROUS_EXT = ('BAT,CMD,COM,CPL,DLL,EXE,HTA,INF,JAR,JS,JSE,LNK,MSC,MSH,MSH1,MSH1XML,MSH2,MSH2XML,MSHXML,'
-    'MSI,MSP,PIF,PS1,PS1XML,PS2,PS2XML,PSC1,PSC2,REG,SCF,SCR,SH,SHS,VB,VBE,VBS,WMF,WS,WSC,WSF,WSH')
+    'MSI,MSP,OCX,PIF,PS1,PS1XML,PS2,PS2XML,PSC1,PSC2,REG,SCF,SCR,SH,SHS,VB,VBE,VBS,WMF,WS,WSC,WSF,WSH')
 
 DANGEROUS_MIME_TYPES = [
     'application/bat',
@@ -24,7 +24,6 @@ DANGEROUS_MIME_TYPES = [
     'application/x-msi',
     'application/x-silverlight',
     'application/x-winexe',
-    'model/mesh',
     'text/scriptlet',
     'text/x-msdos-batch',
     'text/x-sh',
