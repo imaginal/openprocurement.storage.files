@@ -93,7 +93,7 @@ class FilesStorage:
         path, name = self.file_path(key)
         name += '.meta'
         if not os.path.exists(name):
-            raise KeyNotFound(uuid)
+            raise KeyNotFound(uuid)  # pragma: no cover
         with open(name) as fp:
             return json.load(fp)
 
@@ -155,15 +155,15 @@ class FilesStorage:
                         data = res.json()
                         get_url, get_params = data['get_url'].split('?', 1)
                         get_host, slave_uuid = get_url.rsplit('/', 1)
-                        if uuid != slave_uuid:
+                        if uuid != slave_uuid:  # pragma: no cover
                             raise ValueError("Salve uuid mismatch, verify secret_key")
                         LOGGER.info("Success upload {} to slave {}".format(uuid, post_url))
                         break
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     LOGGER.warning("Error {} upload {} to {}: {}".format(n, uuid, post_url, e))
                     if n >= 9:
                         raise
-                sleep(n + 1)
+                    sleep(n + 1)
 
     def register(self, md5hash):
         if md5hash in self.forbidden_hash:
@@ -235,9 +235,9 @@ class FilesStorage:
     def get(self, uuid):
         meta = self.read_meta(uuid)
         if meta['uuid'] != uuid:
-            raise KeyNotFound(uuid)
+            raise KeyNotFound(uuid)  # pragma: no cover
         if meta['hash'] in self.forbidden_hash:
-            raise KeyNotFound(uuid)
+            raise KeyNotFound(uuid)  # pragma: no cover
         key = self.uuid_to_file(uuid)
         meta['X-Accel-Redirect'] = self.web_location(key, meta.get('archived'))
         return meta
