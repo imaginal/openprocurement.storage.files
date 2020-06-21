@@ -1,12 +1,12 @@
 
-.. image:: https://travis-ci.org/imaginal/openprocurement.storage.files.svg?branch=master
-    :target: https://github.com/imaginal/openprocurement.storage.files
+.. image:: https://travis-ci.org/openprocurement/openprocurement.storage.files.svg?branch=master
+    :target: https://github.com/openprocurement/openprocurement.storage.files
 
-.. image:: https://coveralls.io/repos/imaginal/openprocurement.storage.files/badge.svg
-  :target: https://github.com/imaginal/openprocurement.storage.files
+.. image:: https://coveralls.io/repos/openprocurement/openprocurement.storage.files/badge.svg
+  :target: https://github.com/openprocurement/openprocurement.storage.files
 
 .. image:: https://img.shields.io/hexpm/l/plug.svg
-    :target: https://github.com/imaginal/openprocurement.storage.files/blob/master/LICENSE.txt
+    :target: https://github.com/openprocurement/openprocurement.storage.files/blob/master/LICENSE.txt
 
 
 Simple file storage plugin
@@ -35,7 +35,7 @@ Settings
 
 All settings are prefixed with `files.*`
 
-See example in `openprocurement/storage/files/tests/tests.ini <https://github.com/imaginal/openprocurement.storage.files/blob/master/openprocurement/storage/files/tests/tests.ini>`_
+See example in `openprocurement/storage/files/tests/tests.ini <https://github.com/openprocurement/openprocurement.storage.files/blob/master/openprocurement/storage/files/tests/tests.ini>`_
 
 
 Copyright
