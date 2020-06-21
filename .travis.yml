@@ -1,9 +1,10 @@
 language: python
+dist: bionic
 sudo: required
 before_script:
   - sudo add-apt-repository ppa:chris-lea/libsodium -y
   - sudo apt-get -qq update
-  - sudo apt-get install libsodium13 libmagic1 python-setuptools -y
+  - sudo apt-get install libsodium13 libmagic1 -y
 python:
   - "2.7"
 env:
@@ -13,6 +14,7 @@ cache:
   directories:
     - eggs
 before_install:
+  - pip install setuptools==7.0
   - python2 bootstrap.py
 install:
   - bin/buildout -N
