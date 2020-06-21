@@ -2,9 +2,8 @@ language: python
 dist: bionic
 sudo: required
 before_script:
-  - sudo add-apt-repository ppa:chris-lea/libsodium -y
   - sudo apt-get -qq update
-  - sudo apt-get install libsodium13 libmagic1 -y
+  - sudo apt-get install libsodium-dev libmagic1 -y
 python:
   - "2.7"
 env:
