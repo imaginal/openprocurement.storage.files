@@ -49,12 +49,13 @@ class FilesStorage:
             views.EXPIRES = int(settings['files.get_url_expire'])
             LOGGER.warning("Chagne default expire for get_url from {} to {}".format(
                            self.old_EXPIRES, views.EXPIRES))
-        self.slave_apis = list()
-        if 'files.slave_api' in settings:
-            self.slave_apis = [s.strip() for s in settings['files.slave_api'].split(',') if s.strip()]
+        self.replica_apis = list()
+        if 'files.replica_api' in settings:
+            self.replica_apis = [s.strip() for s in settings['files.replica_api'].split(',') if s.strip()]
+        self.require_replica_upload = settings.get('files.require_replica_upload', True)
+        self.replica_timeout = 300
         self.magic = Magic(mime=True)
         self.session = Session()
-        self.slave_timeout = 30
         self.dir_mode = 0o2710
         self.file_mode = 0o440
         self.meta_mode = 0o400
@@ -129,23 +130,23 @@ class FilesStorage:
             md5hash.update(block)
         return "md5:" + md5hash.hexdigest()
 
-    def upload_slave(self, post_file, uuid):
+    def upload_to_replicas(self, post_file, uuid, max_retry=10):
         filename = post_file.filename
         content_type = post_file.type
         in_file = post_file.file
 
-        for slave in self.slave_apis:
+        for replica in self.replica_apis:
             auth = None
             schema = "http"
-            if "://" in slave:
-                schema, slave = slave.split("://", 1)
-            if "@" in slave:
-                auth, slave = slave.split('@', 1)
+            if "://" in replica:
+                schema, replica = replica.split("://", 1)
+            if "@" in replica:
+                auth, replica = replica.split('@', 1)
                 auth = tuple(auth.split(':', 1))
-            post_url = "{}://{}/upload".format(schema, slave)
-            timeout = self.slave_timeout
-            slave_uuid = None
-            for n in range(10):
+            post_url = "{}://{}/upload".format(schema, replica)
+            timeout = self.replica_timeout
+            replica_uuid = None
+            for n in range(max_retry):
                 try:
                     in_file.seek(0)
                     files = {'file': (filename, in_file, content_type, {})}
@@ -154,14 +155,15 @@ class FilesStorage:
                     if res.status_code == 200:
                         data = res.json()
                         get_url, get_params = data['get_url'].split('?', 1)
-                        get_host, slave_uuid = get_url.rsplit('/', 1)
-                        if uuid != slave_uuid:  # pragma: no cover
+                        get_host, replica_uuid = get_url.rsplit('/', 1)
+                        if uuid != replica_uuid:  # pragma: no cover
                             raise ValueError("Salve uuid mismatch, verify secret_key")
-                        LOGGER.info("Success upload {} to slave {}".format(uuid, post_url))
+                        LOGGER.info("Upload {} to replica {}".format(uuid, post_url))
                         break
                 except Exception as e:  # pragma: no cover
-                    LOGGER.warning("Error {} upload {} to {}: {}".format(n, uuid, post_url, e))
-                    if n >= 9:
+                    LOGGER.warning("Error {}/{} upload {} to {}: {}".format(n + 1, max_retry,
+                                    uuid, post_url, e))
+                    if n >= max_retry - 1:
                         raise
                     sleep(n + 1)
 
@@ -184,6 +186,7 @@ class FilesStorage:
         in_file = post_file.file
         md5hash = self.compute_md5(in_file)
         if md5hash in self.forbidden_hash:
+            LOGGER.warning("Forbidden file by hash {}".format(md5hash))
             raise StorageUploadError('forbidden_file ' + md5hash)
 
         if uuid is None:
@@ -209,6 +212,7 @@ class FilesStorage:
             return uuid, md5hash, content_type, filename
 
         if self.check_forbidden(filename, content_type, in_file):
+            LOGGER.warning("Forbidden file {} {} {} {}".format(filename, content_type, uuid, md5hash))
             raise StorageUploadError('forbidden_file ' + md5hash)
 
         meta['filename'] = filename
@@ -227,8 +231,14 @@ class FilesStorage:
         os.rename(name + '~', name)
         os.chmod(name, self.file_mode)
 
-        if self.slave_apis:
-            self.upload_slave(post_file, uuid)
+        try:
+            if self.replica_apis:
+                self.upload_to_replicas(post_file, uuid)
+        except Exception as e:  # pragma: no cover
+            LOGGER.error("Replica failed {}, remove file {} {}".format(e, uuid, md5hash))
+            if self.require_replica_upload:
+                os.rename(name, name + '~')
+                raise StorageUploadError('replica_failed')
 
         return uuid, md5hash, content_type, filename
 

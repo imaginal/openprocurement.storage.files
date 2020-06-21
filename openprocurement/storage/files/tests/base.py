@@ -14,7 +14,7 @@ def slave_main():
     parser = ConfigParser(defaults=defaults)
     parser.read(config)
     settings = dict(parser.items("app:main"))
-    settings.pop("files.slave_api")
+    settings.pop("files.replica_api")
     app = main({}, **settings)
     server = WSGIServer(('127.0.0.1', 6545), app, log=None)
     server.serve_forever()
