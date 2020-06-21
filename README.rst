@@ -19,13 +19,13 @@ Features
 --------
 
 * Full support of openprocurement.documentservice api
-* Store uploads by hash, does not use extra disk space for same uploads
+* Stores uploads by hash, don't used extra disk space for same uploads
 * Secure file ids based on secret_key and double hashing
-* Forbid uploads by file extension, mime/type, hash black lists
-* Custom Content-Disposition header (inline or attachment)
+* Restrict uploads by file extension, mime/type, hash lists
+* Custom ``Content-Disposition`` header (inline or attachment)
 * Can patch openprocurement.documentservice get_url expire time
-* File storage can be distributed to several volumes (sharding)
-* Support for archiving of selected files on the separate volume
+* File storage can be distributed to several volumes (up to 65k shards)
+* Archive selected files to the separate volume by meta info
 * Master/slave replicas support (master/master also can be used)
 * Fast download through nginx X-Accel-Redirect feature
 
